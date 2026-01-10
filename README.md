@@ -33,7 +33,7 @@ An educational touchscreen kiosk application for farmers markets that helps cust
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/your-username/vegucation-station.git
+git clone https://github.com/ebjune/vegucation-station.git
 cd vegucation-station
 ```
 
@@ -133,4 +133,4 @@ Contributions are welcome! Please read our contributing guidelines before submit
 
 ## Support
 
-For issues and feature requests, please use the [GitHub Issues](https://github.com/your-username/vegucation-station/issues) page.
+For issues and feature requests, please use the [GitHub Issues](https://github.com/ebjune/vegucation-station/issues) page.

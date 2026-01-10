@@ -5,10 +5,10 @@
   "main": "dist/main/main/index.js",
   "author": "VegucationStation Contributors",
   "license": "MIT",
-  "homepage": "https://github.com/your-username/vegucation-station",
+  "homepage": "https://github.com/ebjune/vegucation-station",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/vegucation-station.git"
+    "url": "https://github.com/ebjune/vegucation-station.git"
   },
   "scripts": {
     "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:main\"",
