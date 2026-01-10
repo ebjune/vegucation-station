@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  body {
+    @apply bg-cream text-earth-800;
+  }
+}
+
+@layer components {
+  /* Touch-friendly button base styles */
+  .btn-touch {
+    @apply min-h-touch min-w-touch px-6 py-4 rounded-touch font-semibold text-touch-base;
+    @apply transition-all duration-150 ease-in-out;
+    @apply active:scale-95 active:brightness-90;
+  }
+
+  .btn-primary {
+    @apply btn-touch bg-primary-500 text-white;
+    @apply hover:bg-primary-600;
+  }
+
+  .btn-secondary {
+    @apply btn-touch bg-secondary-500 text-white;
+    @apply hover:bg-secondary-600;
+  }
+
+  .btn-outline {
+    @apply btn-touch bg-transparent border-2 border-primary-500 text-primary-700;
+    @apply hover:bg-primary-50;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-touch p-4 shadow-md;
+    @apply transition-transform duration-150;
+    @apply active:scale-98;
+  }
+
+  .card-interactive {
+    @apply card cursor-pointer;
+    @apply hover:shadow-lg active:shadow-md;
+  }
+
+  /* Touch-friendly form inputs */
+  .input-touch {
+    @apply min-h-touch px-4 py-3 rounded-lg text-touch-base;
+    @apply border-2 border-gray-300 focus:border-primary-500 focus:outline-none;
+  }
+
+  /* Numeric keypad button */
+  .keypad-btn {
+    @apply w-20 h-20 rounded-xl text-touch-2xl font-bold;
+    @apply bg-white border-2 border-gray-200;
+    @apply active:bg-gray-100 active:scale-95;
+    @apply transition-all duration-100;
+  }
+}
+
+@layer utilities {
+  .active\:scale-98:active {
+    transform: scale(0.98);
+  }
+
+  /* Smooth scroll for touch */
+  .scroll-touch {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* Text that should be selectable (for email input) */
+  .select-text {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Pulse animation for loading states */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
