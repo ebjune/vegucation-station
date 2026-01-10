@@ -1,8 +1,13 @@
-import { useState } from 'react'
 import type { Recipe } from '../../models/Recipe'
+import TouchButton from '../shared/TouchButton'
 
 interface RecipeCardProps {
   recipe: Recipe
+  isExpanded: boolean
+  onToggle: () => void
+  onEmail: () => void
+  onPrint: () => void
+  emailEnabled: boolean
 }
 
 const DIFFICULTY_COLORS = {
@@ -11,14 +16,12 @@ const DIFFICULTY_COLORS = {
   Advanced: 'bg-red-100 text-red-700',
 }
 
-export default function RecipeCard({ recipe }: RecipeCardProps) {
-  const [expanded, setExpanded] = useState(false)
-
+export default function RecipeCard({ recipe, isExpanded, onToggle, onEmail, onPrint, emailEnabled }: RecipeCardProps) {
   return (
     <div className="bg-white rounded-touch shadow-md overflow-hidden">
       {/* Header */}
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={onToggle}
         className="w-full p-6 text-left hover:bg-gray-50 transition-colors"
       >
         <div className="flex items-start justify-between gap-4">
@@ -29,7 +32,7 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
             <p className="text-touch-sm text-earth-800/70">{recipe.description}</p>
           </div>
           <span className="text-2xl text-primary-500 flex-shrink-0">
-            {expanded ? '▲' : '▼'}
+            {isExpanded ? '▲' : '▼'}
           </span>
         </div>
 
@@ -52,7 +55,7 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
       </button>
 
       {/* Expanded Content */}
-      {expanded && (
+      {isExpanded && (
         <div className="px-6 pb-6 border-t border-gray-100">
           {/* Ingredients */}
           <div className="mt-4">
@@ -87,6 +90,34 @@ export default function RecipeCard({ recipe }: RecipeCardProps) {
                 </li>
               ))}
             </ol>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 mt-6 pt-4 border-t border-gray-100">
+            {emailEnabled && (
+              <TouchButton
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEmail()
+                }}
+                className="flex-1"
+              >
+                📧 Email Recipe
+              </TouchButton>
+            )}
+            <TouchButton
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                onPrint()
+              }}
+              className="flex-1"
+            >
+              🖨️ Print Recipe
+            </TouchButton>
           </div>
         </div>
       )}

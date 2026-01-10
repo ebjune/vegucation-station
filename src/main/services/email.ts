@@ -14,11 +14,24 @@ interface EmailConfig {
   fromName: string
 }
 
-// Default config - should be overridden by environment variables
-const emailConfig: EmailConfig = {
-  service: 'none',
-  fromEmail: 'recipes@vegucationstation.local',
-  fromName: 'VegucationStation',
+// Load config from environment variables
+function getEmailConfig(): EmailConfig {
+  const service = (process.env.EMAIL_SERVICE?.toLowerCase() || 'none') as EmailConfig['service']
+  return {
+    service: ['sendgrid', 'smtp', 'none'].includes(service) ? service : 'none',
+    apiKey: process.env.SENDGRID_API_KEY,
+    smtpHost: process.env.SMTP_HOST,
+    smtpPort: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : undefined,
+    smtpUser: process.env.SMTP_USER,
+    smtpPass: process.env.SMTP_PASS,
+    fromEmail: process.env.SMTP_FROM_EMAIL || 'recipes@vegucationstation.local',
+    fromName: process.env.SMTP_FROM_NAME || 'VegucationStation',
+  }
+}
+
+export function isEmailEnabled(): boolean {
+  const config = getEmailConfig()
+  return config.service !== 'none'
 }
 
 function formatRecipesAsHtml(recipes: Recipe[]): string {
@@ -109,6 +122,7 @@ export async function sendRecipeEmail(
   toEmail: string,
   recipes: Recipe[]
 ): Promise<boolean> {
+  const emailConfig = getEmailConfig()
   const htmlContent = formatRecipesAsHtml(recipes)
   const textContent = formatRecipesAsText(recipes)
 

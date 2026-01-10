@@ -1,9 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { Recipe } from '../database/repository'
 
-// Initialize the Anthropic client
-// API key should be set via ANTHROPIC_API_KEY environment variable
-const anthropic = new Anthropic()
+// Lazy-initialize the Anthropic client (after dotenv loads)
+let anthropicClient: Anthropic | null = null
+
+function getAnthropicClient(): Anthropic {
+  if (!anthropicClient) {
+    console.log('Initializing Anthropic client with API key:', !!process.env.ANTHROPIC_API_KEY)
+    anthropicClient = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    })
+  }
+  return anthropicClient
+}
 
 interface EducationContentResponse {
   funFacts: string[]
@@ -55,7 +64,7 @@ Requirements for detailedInfo:
 Return ONLY valid JSON, no additional text or markdown.`
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await getAnthropicClient().messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
       messages: [
@@ -130,7 +139,7 @@ Provide a JSON response with exactly this structure:
 Return ONLY valid JSON array with exactly 3 recipes, no additional text or markdown.`
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await getAnthropicClient().messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2048,
       messages: [

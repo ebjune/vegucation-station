@@ -1,7 +1,12 @@
+import { config } from 'dotenv'
 import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
 import { initDatabase } from './database/schema'
 import { registerIpcHandlers } from './ipc/handlers'
+
+// Load environment variables from .env file
+config({ path: path.join(app.getAppPath(), '.env') })
+console.log('ANTHROPIC_API_KEY loaded:', !!process.env.ANTHROPIC_API_KEY)
 
 let mainWindow: BrowserWindow | null = null
 

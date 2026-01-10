@@ -63,6 +63,7 @@ export const IPC_CHANNELS = {
   SETTINGS_VERIFY_PIN: 'settings:verifyPin',
 
   // Email
+  EMAIL_IS_ENABLED: 'email:isEnabled',
   EMAIL_SEND_RECIPE: 'email:sendRecipe',
 
   // App

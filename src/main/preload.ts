@@ -31,6 +31,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   verifyPin: (pin: string) => ipcRenderer.invoke('settings:verifyPin', pin),
 
   // Email
+  isEmailEnabled: () => ipcRenderer.invoke('email:isEnabled'),
   sendRecipeEmail: (email: string, recipes: unknown) =>
     ipcRenderer.invoke('email:sendRecipe', email, recipes),
 
@@ -53,6 +54,7 @@ export interface ElectronAPI {
   getSetting: (key: string) => Promise<string | null>
   setSetting: (key: string, value: string) => Promise<void>
   verifyPin: (pin: string) => Promise<boolean>
+  isEmailEnabled: () => Promise<boolean>
   sendRecipeEmail: (email: string, recipes: unknown) => Promise<boolean>
   getAppVersion: () => Promise<string>
   isOnline: () => Promise<boolean>

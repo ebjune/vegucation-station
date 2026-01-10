@@ -26,7 +26,7 @@ interface RecipeState {
   // Email state
   emailSending: boolean
   emailSent: boolean
-  sendEmail: (email: string) => Promise<boolean>
+  sendEmail: (email: string, recipeIndex?: number) => Promise<boolean>
   resetEmailState: () => void
 }
 
@@ -95,7 +95,7 @@ export const useRecipeStore = create<RecipeState>((set, get) => ({
     }
   },
 
-  sendEmail: async (email: string) => {
+  sendEmail: async (email: string, recipeIndex?: number) => {
     const { recipes } = get()
 
     if (recipes.length === 0) {
@@ -103,10 +103,13 @@ export const useRecipeStore = create<RecipeState>((set, get) => ({
       return false
     }
 
+    // Send single recipe if index provided, otherwise send all
+    const recipesToSend = recipeIndex !== undefined ? [recipes[recipeIndex]] : recipes
+
     set({ emailSending: true, error: null })
 
     try {
-      const success = await window.electronAPI.sendRecipeEmail(email, recipes)
+      const success = await window.electronAPI.sendRecipeEmail(email, recipesToSend)
       set({ emailSending: false, emailSent: success })
       return success
     } catch (error) {

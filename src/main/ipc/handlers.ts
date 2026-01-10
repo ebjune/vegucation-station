@@ -3,7 +3,7 @@ import * as repository from '../database/repository'
 import { verifyPin, hashPin } from '../database/migrations'
 import { getDatabase } from '../database/schema'
 import { generateEducationContent, generateRecipes } from '../services/claude'
-import { sendRecipeEmail } from '../services/email'
+import { sendRecipeEmail, isEmailEnabled } from '../services/email'
 
 export function registerIpcHandlers(ipcMain: IpcMain): void {
   // Database: Categories
@@ -93,6 +93,10 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
   })
 
   // Email
+  ipcMain.handle('email:isEnabled', () => {
+    return isEmailEnabled()
+  })
+
   ipcMain.handle('email:sendRecipe', async (_, email: string, recipes: repository.Recipe[]) => {
     return sendRecipeEmail(email, recipes)
   })
