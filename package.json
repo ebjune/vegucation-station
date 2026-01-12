@@ -2,7 +2,7 @@
   "name": "vegucation-station",
   "version": "1.0.0",
   "description": "Educational kiosk application for farmers markets - learn about produce and get recipes",
-  "main": "dist/main/main/index.js",
+  "main": "dist/main/index.js",
   "author": "VegucationStation Contributors",
   "license": "MIT",
   "homepage": "https://github.com/ebjune/vegucation-station",
@@ -55,8 +55,7 @@
       "output": "release"
     },
     "files": [
-      "dist/**/*",
-      "assets/**/*"
+      "dist/**/*"
     ],
     "win": {
       "target": [

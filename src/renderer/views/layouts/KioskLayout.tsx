@@ -58,7 +58,10 @@ export default function KioskLayout() {
           <div className="flex items-center gap-4">
             {isSellerAuthenticated && isSellerRoute && (
               <button
-                onClick={logout}
+                onClick={() => {
+                  logout()
+                  navigate('/')
+                }}
                 className="px-4 py-2 bg-white/20 rounded-lg text-touch-sm font-medium hover:bg-white/30 transition-colors"
               >
                 Exit Seller Mode

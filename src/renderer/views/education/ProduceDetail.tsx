@@ -7,7 +7,7 @@ import LoadingSpinner from '../shared/LoadingSpinner'
 import TouchButton from '../shared/TouchButton'
 import FunFacts from './FunFacts'
 import NutritionInfo from './NutritionInfo'
-import { getProduceEmoji } from '../shared/ProduceCard'
+import { getProduceEmoji, useProduceImage } from '../shared/ProduceCard'
 
 export default function ProduceDetail() {
   const navigate = useNavigate()
@@ -19,6 +19,8 @@ export default function ProduceDetail() {
   const [content, setContent] = useState<Awaited<ReturnType<typeof fetchContent>>>(null)
 
   const produce = availableProduce.find((p) => p.id === parseInt(produceId || '', 10))
+  // Auto-detect image based on produce name
+  const imageSrc = useProduceImage(produce?.name || '')
 
   // Fetch produce if not loaded
   useEffect(() => {
@@ -71,12 +73,12 @@ export default function ProduceDetail() {
       <div className="max-w-4xl mx-auto p-6">
         {/* Header */}
         <div className="flex items-center gap-6 mb-8">
-          <div className="text-8xl">
-            {produce.imagePath ? (
+          <div className="w-32 h-32 flex items-center justify-center text-8xl">
+            {imageSrc ? (
               <img
-                src={produce.imagePath}
+                src={imageSrc}
                 alt={produce.name}
-                className="w-32 h-32 object-cover rounded-2xl"
+                className="w-full h-full object-cover rounded-2xl shadow-md"
               />
             ) : (
               getProduceEmoji(produce.name)

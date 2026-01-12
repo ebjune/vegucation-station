@@ -11,6 +11,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('db:setProduceAvailability', id, available),
   addProduce: (produce: { name: string; categoryId: number; imagePath?: string }) =>
     ipcRenderer.invoke('db:addProduce', produce),
+  getProduceById: (id: number) => ipcRenderer.invoke('db:getProduceById', id),
+
+  // Image management
+  downloadImageForProduce: (
+    produceId: number,
+    imageUrl: string,
+    attribution: { creditName?: string; creditUrl?: string; license?: string }
+  ) => ipcRenderer.invoke('image:downloadForProduce', produceId, imageUrl, attribution),
 
   // Education content
   getEducationContent: (produceId: number) =>
@@ -47,6 +55,12 @@ export interface ElectronAPI {
   getAvailableProduce: () => Promise<Produce[]>
   setProduceAvailability: (id: number, available: boolean) => Promise<void>
   addProduce: (produce: { name: string; categoryId: number; imagePath?: string }) => Promise<number>
+  getProduceById: (id: number) => Promise<Produce | null>
+  downloadImageForProduce: (
+    produceId: number,
+    imageUrl: string,
+    attribution: { creditName?: string; creditUrl?: string; license?: string }
+  ) => Promise<{ success: boolean; imagePath: string }>
   getEducationContent: (produceId: number) => Promise<EducationContent | null>
   generateEducationContent: (produceName: string, produceId: number) => Promise<EducationContent>
   generateRecipes: (ingredients: string[]) => Promise<Recipe[]>
@@ -72,6 +86,10 @@ interface Produce {
   name: string
   categoryId: number
   imagePath: string | null
+  imageSourceUrl: string | null
+  imageCreditName: string | null
+  imageCreditUrl: string | null
+  imageLicense: string | null
   isAvailable: boolean
   createdAt: string
 }

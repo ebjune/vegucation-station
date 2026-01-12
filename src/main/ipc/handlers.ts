@@ -4,6 +4,7 @@ import { verifyPin, hashPin } from '../database/migrations'
 import { getDatabase } from '../database/schema'
 import { generateEducationContent, generateRecipes } from '../services/claude'
 import { sendRecipeEmail, isEmailEnabled } from '../services/email'
+import { downloadProduceImage } from '../services/imageDownloader'
 
 export function registerIpcHandlers(ipcMain: IpcMain): void {
   // Database: Categories
@@ -26,6 +27,36 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
 
   ipcMain.handle('db:addProduce', (_, produce: { name: string; categoryId: number; imagePath?: string }) => {
     return repository.addProduce(produce)
+  })
+
+  ipcMain.handle('db:getProduceById', (_, id: number) => {
+    return repository.getProduceById(id)
+  })
+
+  // Image management
+  ipcMain.handle('image:downloadForProduce', async (
+    _,
+    produceId: number,
+    imageUrl: string,
+    attribution: { creditName?: string; creditUrl?: string; license?: string }
+  ) => {
+    const produce = repository.getProduceById(produceId)
+    if (!produce) {
+      throw new Error('Produce not found')
+    }
+
+    // Download the image and get the local path
+    const localPath = await downloadProduceImage(imageUrl, produce.name)
+
+    // Update the database with the new image path and attribution
+    repository.updateProduceImage(produceId, localPath, {
+      sourceUrl: imageUrl,
+      creditName: attribution.creditName,
+      creditUrl: attribution.creditUrl,
+      license: attribution.license,
+    })
+
+    return { success: true, imagePath: localPath }
   })
 
   // Education content

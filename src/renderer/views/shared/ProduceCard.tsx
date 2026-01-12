@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import type { Produce } from '../../models/Produce'
 
 interface ProduceCardProps {
@@ -5,6 +6,52 @@ interface ProduceCardProps {
   onClick?: () => void
   selected?: boolean
   showAvailability?: boolean
+}
+
+// Convert produce name to image filename base (e.g., "Green Beans" -> "green-beans")
+function nameToImageBase(name: string): string {
+  return name.toLowerCase().replace(/['\s]/g, '-').replace(/--/g, '-')
+}
+
+// Try multiple image extensions based on produce name
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
+
+// refreshKey parameter forces re-check when changed (e.g., after downloading new image)
+export function useProduceImage(produceName: string, refreshKey: number = 0): string | null {
+  const [imageSrc, setImageSrc] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Reset state when refreshKey changes
+    setImageSrc(null)
+
+    const baseName = nameToImageBase(produceName)
+    const basePath = `/produce-images/${baseName}`
+
+    // Check each extension
+    let found = false
+    for (const ext of IMAGE_EXTENSIONS) {
+      // Add cache-busting query param when refreshKey > 0
+      const cacheBust = refreshKey > 0 ? `?v=${refreshKey}` : ''
+      const testPath = basePath + ext + cacheBust
+      const img = new Image()
+      img.onload = () => {
+        if (!found) {
+          found = true
+          setImageSrc(testPath)
+        }
+      }
+      img.src = testPath
+    }
+
+    // Timeout fallback - show emoji if no image found
+    const timeout = setTimeout(() => {
+      if (!found) setImageSrc(null)
+    }, 500)
+
+    return () => clearTimeout(timeout)
+  }, [produceName, refreshKey])
+
+  return imageSrc
 }
 
 // Placeholder images based on produce name
@@ -82,6 +129,9 @@ export default function ProduceCard({
   selected = false,
   showAvailability = false,
 }: ProduceCardProps) {
+  // Auto-detect image based on produce name (checks .jpg, .png, .webp)
+  const imageSrc = useProduceImage(produce.name)
+
   return (
     <button
       onClick={onClick}
@@ -114,15 +164,15 @@ export default function ProduceCard({
       )}
 
       {/* Produce image or emoji */}
-      <div className="text-6xl">
-        {produce.imagePath ? (
+      <div className="w-24 h-24 flex items-center justify-center">
+        {imageSrc ? (
           <img
-            src={produce.imagePath}
+            src={imageSrc}
             alt={produce.name}
-            className="w-20 h-20 object-cover rounded-lg"
+            className="w-full h-full object-cover rounded-xl shadow-sm"
           />
         ) : (
-          getProduceEmoji(produce.name)
+          <span className="text-6xl">{getProduceEmoji(produce.name)}</span>
         )}
       </div>
 

@@ -12,6 +12,7 @@ const DEFAULT_CATEGORIES = [
 ]
 
 // Sample produce items for each category
+// Images are auto-detected from /produce-images/ folder based on produce name
 const DEFAULT_PRODUCE: { name: string; category: string }[] = [
   // Vegetables
   { name: 'Tomatoes', category: 'Vegetables' },
@@ -66,7 +67,7 @@ const DEFAULT_PRODUCE: { name: string; category: string }[] = [
   { name: 'Oyster Mushrooms', category: 'Mushrooms' },
   { name: 'Portobello', category: 'Mushrooms' },
   { name: 'Cremini', category: 'Mushrooms' },
-  { name: 'Lion\'s Mane', category: 'Mushrooms' },
+  { name: "Lion's Mane", category: 'Mushrooms' },
 
   // Herbs & Microgreens
   { name: 'Basil', category: 'Herbs & Microgreens' },
@@ -107,6 +108,7 @@ export function seedInitialData(db: Database.Database): void {
   }
 
   // Insert produce items
+  // Note: image_path is left NULL - images are auto-detected from /produce-images/ folder
   const insertProduce = db.prepare(`
     INSERT INTO produce (name, category_id, is_available)
     VALUES (?, ?, 0)

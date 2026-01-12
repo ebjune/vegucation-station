@@ -40,6 +40,10 @@ export async function initDatabase(): Promise<void> {
       name TEXT NOT NULL,
       category_id INTEGER REFERENCES categories(id),
       image_path TEXT,
+      image_source_url TEXT,
+      image_credit_name TEXT,
+      image_credit_url TEXT,
+      image_license TEXT,
       is_available INTEGER DEFAULT 0,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
@@ -73,6 +77,25 @@ export async function initDatabase(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_produce_available ON produce(is_available);
     CREATE INDEX IF NOT EXISTS idx_education_produce ON education_cache(produce_id);
   `)
+
+  // Run migrations for existing databases
+  const columns = db.prepare("PRAGMA table_info(produce)").all() as Array<{ name: string }>
+  const columnNames = columns.map(col => col.name)
+
+  // Add image_source_url column if it doesn't exist
+  if (!columnNames.includes('image_source_url')) {
+    db.exec('ALTER TABLE produce ADD COLUMN image_source_url TEXT')
+  }
+  // Add attribution columns if they don't exist
+  if (!columnNames.includes('image_credit_name')) {
+    db.exec('ALTER TABLE produce ADD COLUMN image_credit_name TEXT')
+  }
+  if (!columnNames.includes('image_credit_url')) {
+    db.exec('ALTER TABLE produce ADD COLUMN image_credit_url TEXT')
+  }
+  if (!columnNames.includes('image_license')) {
+    db.exec('ALTER TABLE produce ADD COLUMN image_license TEXT')
+  }
 
   // Check if we need to seed initial data
   const categoryCount = db.prepare('SELECT COUNT(*) as count FROM categories').get() as { count: number }

@@ -13,6 +13,10 @@ export interface Produce {
   name: string
   categoryId: number
   imagePath: string | null
+  imageSourceUrl: string | null
+  imageCreditName: string | null
+  imageCreditUrl: string | null
+  imageLicense: string | null
   isAvailable: boolean
   createdAt: string
 }
@@ -52,7 +56,12 @@ export function getProduce(categoryId?: number): Produce[] {
   const db = getDatabase()
   let query = `
     SELECT id, name, category_id as categoryId, image_path as imagePath,
-           is_available as isAvailable, created_at as createdAt
+           image_source_url as imageSourceUrl,
+           image_credit_name as imageCreditName,
+           image_credit_url as imageCreditUrl,
+           image_license as imageLicense,
+           is_available as isAvailable,
+           created_at as createdAt
     FROM produce
   `
   const params: number[] = []
@@ -69,6 +78,10 @@ export function getProduce(categoryId?: number): Produce[] {
     name: string
     categoryId: number
     imagePath: string | null
+    imageSourceUrl: string | null
+    imageCreditName: string | null
+    imageCreditUrl: string | null
+    imageLicense: string | null
     isAvailable: number
     createdAt: string
   }>
@@ -83,7 +96,12 @@ export function getAvailableProduce(): Produce[] {
   const db = getDatabase()
   const rows = db.prepare(`
     SELECT id, name, category_id as categoryId, image_path as imagePath,
-           is_available as isAvailable, created_at as createdAt
+           image_source_url as imageSourceUrl,
+           image_credit_name as imageCreditName,
+           image_credit_url as imageCreditUrl,
+           image_license as imageLicense,
+           is_available as isAvailable,
+           created_at as createdAt
     FROM produce
     WHERE is_available = 1
     ORDER BY name
@@ -92,6 +110,10 @@ export function getAvailableProduce(): Produce[] {
     name: string
     categoryId: number
     imagePath: string | null
+    imageSourceUrl: string | null
+    imageCreditName: string | null
+    imageCreditUrl: string | null
+    imageLicense: string | null
     isAvailable: number
     createdAt: string
   }>
@@ -120,6 +142,66 @@ export function addProduce(produce: {
     VALUES (?, ?, ?)
   `).run(produce.name, produce.categoryId, produce.imagePath || null)
   return result.lastInsertRowid as number
+}
+
+export interface ImageAttribution {
+  sourceUrl: string
+  creditName?: string
+  creditUrl?: string
+  license?: string
+}
+
+export function updateProduceImage(id: number, imagePath: string, attribution: ImageAttribution): void {
+  const db = getDatabase()
+  db.prepare(`
+    UPDATE produce
+    SET image_path = ?,
+        image_source_url = ?,
+        image_credit_name = ?,
+        image_credit_url = ?,
+        image_license = ?
+    WHERE id = ?
+  `).run(
+    imagePath,
+    attribution.sourceUrl,
+    attribution.creditName || null,
+    attribution.creditUrl || null,
+    attribution.license || null,
+    id
+  )
+}
+
+export function getProduceById(id: number): Produce | null {
+  const db = getDatabase()
+  const row = db.prepare(`
+    SELECT id, name, category_id as categoryId, image_path as imagePath,
+           image_source_url as imageSourceUrl,
+           image_credit_name as imageCreditName,
+           image_credit_url as imageCreditUrl,
+           image_license as imageLicense,
+           is_available as isAvailable,
+           created_at as createdAt
+    FROM produce
+    WHERE id = ?
+  `).get(id) as {
+    id: number
+    name: string
+    categoryId: number
+    imagePath: string | null
+    imageSourceUrl: string | null
+    imageCreditName: string | null
+    imageCreditUrl: string | null
+    imageLicense: string | null
+    isAvailable: number
+    createdAt: string
+  } | undefined
+
+  if (!row) return null
+
+  return {
+    ...row,
+    isAvailable: Boolean(row.isAvailable),
+  }
 }
 
 // Education content operations

@@ -3,6 +3,10 @@ export interface Produce {
   name: string
   categoryId: number
   imagePath: string | null
+  imageSourceUrl: string | null
+  imageCreditName: string | null
+  imageCreditUrl: string | null
+  imageLicense: string | null
   isAvailable: boolean
   createdAt: string
 }
