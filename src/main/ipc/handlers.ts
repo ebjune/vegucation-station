@@ -5,6 +5,7 @@ import { getDatabase } from '../database/schema'
 import { generateEducationContent, generateRecipes } from '../services/claude'
 import { sendRecipeEmail, isEmailEnabled } from '../services/email'
 import { downloadProduceImage } from '../services/imageDownloader'
+import { printRecipe } from '../services/printer'
 
 export function registerIpcHandlers(ipcMain: IpcMain): void {
   // Database: Categories
@@ -142,5 +143,10 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
     return require('dns').promises.lookup('google.com')
       .then(() => true)
       .catch(() => false)
+  })
+
+  // Thermal / receipt printer (silent print via Electron)
+  ipcMain.handle('printer:printRecipe', async (_, recipe: repository.Recipe) => {
+    return printRecipe(recipe)
   })
 }

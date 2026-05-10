@@ -46,6 +46,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App info
   getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
   isOnline: () => ipcRenderer.invoke('app:isOnline'),
+
+  // Recipe receipt printing (main process → named Windows printer)
+  printRecipe: (recipe: unknown) => ipcRenderer.invoke('printer:printRecipe', recipe),
 })
 
 // Type definitions for the exposed API
@@ -72,6 +75,8 @@ export interface ElectronAPI {
   sendRecipeEmail: (email: string, recipes: unknown) => Promise<boolean>
   getAppVersion: () => Promise<string>
   isOnline: () => Promise<boolean>
+
+  printRecipe: (recipe: unknown) => Promise<{ ok: boolean; error?: string }>
 }
 
 interface Category {

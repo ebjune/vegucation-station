@@ -39,7 +39,7 @@
   .card {
     @apply bg-white rounded-touch p-4 shadow-md;
     @apply transition-transform duration-150;
-    @apply active:scale-98;
+    @apply active:scale-[0.98];
   }
 
   .card-interactive {
@@ -63,10 +63,6 @@
 }
 
 @layer utilities {
-  .active\:scale-98:active {
-    transform: scale(0.98);
-  }
-
   /* Smooth scroll for touch */
   .scroll-touch {
     -webkit-overflow-scrolling: touch;

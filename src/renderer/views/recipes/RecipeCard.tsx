@@ -8,6 +8,10 @@ interface RecipeCardProps {
   onEmail: () => void
   onPrint: () => void
   emailEnabled: boolean
+  /** This card's print job is in progress */
+  isPrinting?: boolean
+  /** Another card (or this one) is printing — disable all print buttons */
+  printBusy?: boolean
 }
 
 const DIFFICULTY_COLORS = {
@@ -16,7 +20,16 @@ const DIFFICULTY_COLORS = {
   Advanced: 'bg-red-100 text-red-700',
 }
 
-export default function RecipeCard({ recipe, isExpanded, onToggle, onEmail, onPrint, emailEnabled }: RecipeCardProps) {
+export default function RecipeCard({
+  recipe,
+  isExpanded,
+  onToggle,
+  onEmail,
+  onPrint,
+  emailEnabled,
+  isPrinting = false,
+  printBusy = false,
+}: RecipeCardProps) {
   return (
     <div className="bg-white rounded-touch shadow-md overflow-hidden">
       {/* Header */}
@@ -115,8 +128,9 @@ export default function RecipeCard({ recipe, isExpanded, onToggle, onEmail, onPr
                 onPrint()
               }}
               className="flex-1"
+              disabled={printBusy}
             >
-              🖨️ Print Recipe
+              {isPrinting ? '🖨️ Printing…' : '🖨️ Print Recipe'}
             </TouchButton>
           </div>
         </div>

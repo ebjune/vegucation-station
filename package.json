@@ -11,7 +11,7 @@
     "url": "https://github.com/ebjune/vegucation-station.git"
   },
   "scripts": {
-    "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:main\"",
+    "dev": "tsc -p tsconfig.main.json && concurrently \"npm run dev:renderer\" \"npm run dev:main\"",
     "dev:renderer": "vite",
     "dev:main": "tsc -p tsconfig.main.json --watch",
     "build": "npm run build:renderer && npm run build:main",

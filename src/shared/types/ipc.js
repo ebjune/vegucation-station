@@ -25,4 +25,6 @@ exports.IPC_CHANNELS = {
     // App
     APP_GET_VERSION: 'app:getVersion',
     APP_IS_ONLINE: 'app:isOnline',
+    // Printer
+    PRINTER_PRINT_RECIPE: 'printer:printRecipe',
 };
