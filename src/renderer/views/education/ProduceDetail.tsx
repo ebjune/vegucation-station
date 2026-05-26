@@ -20,7 +20,7 @@ export default function ProduceDetail() {
 
   const produce = availableProduce.find((p) => p.id === parseInt(produceId || '', 10))
   // Auto-detect image based on produce name
-  const imageSrc = useProduceImage(produce?.name || '')
+  const imageSrc = useProduceImage(produce?.name || '', produce?.imagePath ?? null)
 
   // Fetch produce if not loaded
   useEffect(() => {

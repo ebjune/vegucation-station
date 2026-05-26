@@ -254,6 +254,44 @@ export function saveEducationContent(
   )
 }
 
+export function deleteEducationContent(produceId: number): void {
+  const db = getDatabase()
+  db.prepare('DELETE FROM education_cache WHERE produce_id = ?').run(produceId)
+}
+
+export function getProduceByName(name: string): Produce | null {
+  const db = getDatabase()
+  const row = db.prepare(`
+    SELECT id, name, category_id as categoryId, image_path as imagePath,
+           image_source_url as imageSourceUrl,
+           image_credit_name as imageCreditName,
+           image_credit_url as imageCreditUrl,
+           image_license as imageLicense,
+           is_available as isAvailable,
+           created_at as createdAt
+    FROM produce
+    WHERE LOWER(name) = LOWER(?)
+  `).get(name) as {
+    id: number
+    name: string
+    categoryId: number
+    imagePath: string | null
+    imageSourceUrl: string | null
+    imageCreditName: string | null
+    imageCreditUrl: string | null
+    imageLicense: string | null
+    isAvailable: number
+    createdAt: string
+  } | undefined
+
+  if (!row) return null
+
+  return {
+    ...row,
+    isAvailable: Boolean(row.isAvailable),
+  }
+}
+
 // Recipe cache operations
 export function getCachedRecipes(ingredientHash: string): Recipe[] | null {
   const db = getDatabase()

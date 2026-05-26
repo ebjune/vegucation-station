@@ -7,6 +7,7 @@ import ItemSelector from './views/recipes/ItemSelector'
 import RecipeResults from './views/recipes/RecipeResults'
 import PinEntry from './views/seller/PinEntry'
 import ProduceManager from './views/seller/ProduceManager'
+import SellerRoute from './views/seller/SellerRoute'
 
 // Use HashRouter for Electron compatibility (file:// protocol)
 const Router = window.location.protocol === 'file:' ? HashRouter : BrowserRouter
@@ -26,7 +27,7 @@ function App() {
 
           {/* Seller Routes */}
           <Route path="seller" element={<PinEntry />} />
-          <Route path="seller/manage" element={<ProduceManager />} />
+          <Route path="seller/manage" element={<SellerRoute><ProduceManager /></SellerRoute>} />
         </Route>
       </Routes>
     </Router>

@@ -22,6 +22,12 @@ interface EducationState {
   // Fetch content (from cache or generate)
   fetchContent: (produceId: number, produceName: string) => Promise<EducationContent | null>
 
+  // Force refresh content (clears cache and regenerates)
+  refreshContent: (produceId: number, produceName: string) => Promise<EducationContent | null>
+
+  // Clear cached content for a produce item
+  clearCachedContent: (produceId: number) => void
+
   // Get cached content
   getCachedContent: (produceId: number) => EducationContent | undefined
 }
@@ -82,5 +88,44 @@ export const useEducationStore = create<EducationState>((set, get) => ({
 
   getCachedContent: (produceId: number) => {
     return get().contentCache[produceId]
+  },
+
+  refreshContent: async (produceId: number, produceName: string) => {
+    set({ isLoading: true, error: null })
+
+    try {
+      const content = await window.electronAPI.refreshEducationContent(produceName, produceId)
+
+      if (content) {
+        set((state) => {
+          const { [produceId]: _, ...rest } = state.contentCache
+          return {
+            contentCache: {
+              ...rest,
+              [produceId]: content as EducationContent,
+            },
+            currentProduceId: produceId,
+            isLoading: false,
+          }
+        })
+        return content as EducationContent
+      }
+
+      throw new Error('Failed to refresh education content')
+    } catch (error) {
+      console.error('Failed to refresh education content:', error)
+      set({
+        error: 'Unable to refresh educational content. Please check your connection and try again.',
+        isLoading: false,
+      })
+      return null
+    }
+  },
+
+  clearCachedContent: (produceId: number) => {
+    set((state) => {
+      const { [produceId]: _, ...rest } = state.contentCache
+      return { contentCache: rest }
+    })
   },
 }))

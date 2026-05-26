@@ -25,6 +25,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('education:getContent', produceId),
   generateEducationContent: (produceName: string, produceId: number) =>
     ipcRenderer.invoke('education:generate', produceName, produceId),
+  refreshEducationContent: (produceName: string, produceId: number) =>
+    ipcRenderer.invoke('education:refresh', produceName, produceId),
+  isFallbackEducationContent: (produceId: number) =>
+    ipcRenderer.invoke('education:isFallback', produceId),
+
+  // Produce creation with AI content
+  createProduceWithDetails: (data: { name: string; categoryId: number }) =>
+    ipcRenderer.invoke('produce:createWithDetails', data),
 
   // Recipe operations
   generateRecipes: (ingredients: string[]) =>
@@ -66,6 +74,12 @@ export interface ElectronAPI {
   ) => Promise<{ success: boolean; imagePath: string }>
   getEducationContent: (produceId: number) => Promise<EducationContent | null>
   generateEducationContent: (produceName: string, produceId: number) => Promise<EducationContent>
+  refreshEducationContent: (produceName: string, produceId: number) => Promise<EducationContent & { isFallback?: boolean }>
+  isFallbackEducationContent: (produceId: number) => Promise<boolean>
+  createProduceWithDetails: (data: { name: string; categoryId: number }) => Promise<{
+    produce: Produce | null
+    educationGenerated: boolean
+  }>
   generateRecipes: (ingredients: string[]) => Promise<Recipe[]>
   getCachedRecipes: (ingredientHash: string) => Promise<Recipe[] | null>
   getSetting: (key: string) => Promise<string | null>

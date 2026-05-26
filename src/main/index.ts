@@ -3,6 +3,14 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
 import { initDatabase } from './database/schema'
 import { registerIpcHandlers } from './ipc/handlers'
+import {
+  registerProduceImageProtocol,
+  setupProduceImageProtocol,
+} from './services/produceImageProtocol'
+import { migrateLegacyProduceImages } from './services/migrateProduceImages'
+
+// Custom protocol for seller-downloaded produce images (must be before app.ready)
+registerProduceImageProtocol()
 
 // Load environment variables from .env file
 config({ path: path.join(app.getAppPath(), '.env') })
@@ -68,8 +76,11 @@ function createWindow(): void {
 
 // Initialize app
 app.whenReady().then(async () => {
+  setupProduceImageProtocol()
+
   // Initialize database
   await initDatabase()
+  migrateLegacyProduceImages()
 
   // Register IPC handlers
   registerIpcHandlers(ipcMain)

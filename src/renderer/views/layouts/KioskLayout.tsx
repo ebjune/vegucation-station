@@ -6,7 +6,14 @@ import { useState, useRef, useEffect } from 'react'
 export default function KioskLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { isOnline, mode, isSellerAuthenticated, logout } = useAppStore()
+  const { isOnline, isSellerAuthenticated, logout } = useAppStore()
+
+  // Clear seller auth when leaving seller routes (handles Exit Seller Mode)
+  useEffect(() => {
+    if (!location.pathname.startsWith('/seller') && isSellerAuthenticated) {
+      logout()
+    }
+  }, [location.pathname, isSellerAuthenticated, logout])
 
   // Long-press detection for seller mode access
   const [longPressTimer, setLongPressTimer] = useState<number | null>(null)
@@ -58,10 +65,7 @@ export default function KioskLayout() {
           <div className="flex items-center gap-4">
             {isSellerAuthenticated && isSellerRoute && (
               <button
-                onClick={() => {
-                  logout()
-                  navigate('/')
-                }}
+                onClick={() => navigate('/', { replace: true })}
                 className="px-4 py-2 bg-white/20 rounded-lg text-touch-sm font-medium hover:bg-white/30 transition-colors"
               >
                 Exit Seller Mode

@@ -13,43 +13,85 @@ function nameToImageBase(name: string): string {
   return name.toLowerCase().replace(/['\s]/g, '-').replace(/--/g, '-')
 }
 
-// Try multiple image extensions based on produce name
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
 
-// refreshKey parameter forces re-check when changed (e.g., after downloading new image)
-export function useProduceImage(produceName: string, refreshKey: number = 0): string | null {
+function withCacheBust(src: string, refreshKey: number): string {
+  if (refreshKey <= 0) return src
+  const separator = src.includes('?') ? '&' : '?'
+  return `${src}${separator}v=${refreshKey}`
+}
+
+function tryLoadImage(src: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve(true)
+    img.onerror = () => resolve(false)
+    img.src = src
+  })
+}
+
+function normalizeDbImagePath(imagePath: string): string | null {
+  if (imagePath.startsWith('/produce-images/')) {
+    return imagePath
+  }
+  if (imagePath.startsWith('produce://')) {
+    try {
+      const url = new URL(imagePath)
+      const fromPath = url.pathname.replace(/^\//, '')
+      if (fromPath) {
+        return `produce:///${encodeURIComponent(decodeURIComponent(fromPath))}`
+      }
+      if (url.hostname) {
+        return `produce:///${encodeURIComponent(url.hostname)}`
+      }
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+// refreshKey forces re-check when changed (e.g., after downloading new image)
+export function useProduceImage(
+  produceName: string,
+  imagePath: string | null = null,
+  refreshKey: number = 0
+): string | null {
   const [imageSrc, setImageSrc] = useState<string | null>(null)
 
   useEffect(() => {
-    // Reset state when refreshKey changes
-    setImageSrc(null)
+    let cancelled = false
 
-    const baseName = nameToImageBase(produceName)
-    const basePath = `/produce-images/${baseName}`
+    async function resolveImage() {
+      setImageSrc(null)
 
-    // Check each extension
-    let found = false
-    for (const ext of IMAGE_EXTENSIONS) {
-      // Add cache-busting query param when refreshKey > 0
-      const cacheBust = refreshKey > 0 ? `?v=${refreshKey}` : ''
-      const testPath = basePath + ext + cacheBust
-      const img = new Image()
-      img.onload = () => {
-        if (!found) {
-          found = true
-          setImageSrc(testPath)
+      const dbPath = imagePath ? normalizeDbImagePath(imagePath) : null
+      if (dbPath) {
+        const src = withCacheBust(dbPath, refreshKey)
+        if (await tryLoadImage(src)) {
+          if (!cancelled) setImageSrc(src)
+          return
         }
       }
-      img.src = testPath
+
+      const baseName = nameToImageBase(produceName)
+      const basePath = `/produce-images/${baseName}`
+
+      for (const ext of IMAGE_EXTENSIONS) {
+        const testPath = withCacheBust(basePath + ext, refreshKey)
+        if (await tryLoadImage(testPath)) {
+          if (!cancelled) setImageSrc(testPath)
+          return
+        }
+      }
     }
 
-    // Timeout fallback - show emoji if no image found
-    const timeout = setTimeout(() => {
-      if (!found) setImageSrc(null)
-    }, 500)
+    resolveImage()
 
-    return () => clearTimeout(timeout)
-  }, [produceName, refreshKey])
+    return () => {
+      cancelled = true
+    }
+  }, [produceName, imagePath, refreshKey])
 
   return imageSrc
 }
@@ -118,6 +160,7 @@ function getProduceEmoji(name: string): string {
     jam: '🍓',
     pickles: '🥒',
     'fresh bread': '🍞',
+    fennel: '🌿',
   }
 
   return emojiMap[name.toLowerCase()] || '🥗'
@@ -129,8 +172,7 @@ export default function ProduceCard({
   selected = false,
   showAvailability = false,
 }: ProduceCardProps) {
-  // Auto-detect image based on produce name (checks .jpg, .png, .webp)
-  const imageSrc = useProduceImage(produce.name)
+  const imageSrc = useProduceImage(produce.name, produce.imagePath)
 
   return (
     <button
@@ -146,7 +188,6 @@ export default function ProduceCard({
         ${onClick ? 'cursor-pointer active:scale-95' : 'cursor-default'}
       `}
     >
-      {/* Availability indicator */}
       {showAvailability && (
         <div
           className={`
@@ -156,14 +197,12 @@ export default function ProduceCard({
         />
       )}
 
-      {/* Selection checkmark */}
       {selected && (
         <div className="absolute top-2 left-2 w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
           <span className="text-white text-lg">✓</span>
         </div>
       )}
 
-      {/* Produce image or emoji */}
       <div className="w-24 h-24 flex items-center justify-center">
         {imageSrc ? (
           <img
@@ -176,7 +215,6 @@ export default function ProduceCard({
         )}
       </div>
 
-      {/* Produce name */}
       <span className="text-touch-base font-semibold text-earth-800 text-center leading-tight">
         {produce.name}
       </span>

@@ -1,25 +1,34 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useProduceStore } from '../../viewmodels/useProduceStore'
 import { useSellerStore } from '../../viewmodels/useSellerStore'
-import { useAppStore } from '../../viewmodels/useAppStore'
+import { useEducationStore } from '../../viewmodels/useEducationStore'
 import LoadingSpinner from '../shared/LoadingSpinner'
 import { getProduceEmoji, useProduceImage } from '../shared/ProduceCard'
 import type { Produce } from '../../models/Produce'
+import type { Category } from '../../models/Category'
 
 interface EditingProduce {
   id: number
   name: string
+  imagePath: string | null
   imageSourceUrl: string | null
   imageCreditName: string | null
   imageCreditUrl: string | null
   imageLicense: string | null
 }
 
-// Component to show produce image or emoji fallback
-// refreshKey forces re-check when image is updated
-function ProduceImageOrEmoji({ name, size = 'md', refreshKey = 0 }: { name: string; size?: 'sm' | 'md' | 'lg'; refreshKey?: number }) {
-  const imageSrc = useProduceImage(name, refreshKey)
+function ProduceImageOrEmoji({
+  name,
+  imagePath = null,
+  size = 'md',
+  refreshKey = 0,
+}: {
+  name: string
+  imagePath?: string | null
+  size?: 'sm' | 'md' | 'lg'
+  refreshKey?: number
+}) {
+  const imageSrc = useProduceImage(name, imagePath, refreshKey)
   const sizeClasses = {
     sm: 'w-8 h-8 text-2xl',
     md: 'w-12 h-12 text-3xl',
@@ -43,10 +52,12 @@ function ProduceImageOrEmoji({ name, size = 'md', refreshKey = 0 }: { name: stri
 
 function ImageEditModal({
   produce,
+  imageRefreshKey,
   onClose,
   onSave,
 }: {
   produce: EditingProduce
+  imageRefreshKey: number
   onClose: () => void
   onSave: () => void
 }) {
@@ -57,9 +68,8 @@ function ImageEditModal({
   const [isDownloading, setIsDownloading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-
-  // Get current image from the hook
-  const currentImage = useProduceImage(produce.name)
+  const [savedImagePath, setSavedImagePath] = useState(produce.imagePath)
+  const [previewKey, setPreviewKey] = useState(0)
 
   const handleDownload = async () => {
     if (!imageUrl.trim()) {
@@ -91,7 +101,10 @@ function ImageEditModal({
       )
       if (result.success) {
         setSuccess(true)
-        // Trigger a refresh after a brief delay to show success message
+        if (result.imagePath) {
+          setSavedImagePath(result.imagePath)
+          setPreviewKey((k) => k + 1)
+        }
         setTimeout(() => {
           onSave()
         }, 1500)
@@ -126,7 +139,12 @@ function ImageEditModal({
             Current Image
           </label>
           <div className="w-32 h-32 mx-auto rounded-lg border-2 border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
-            <ProduceImageOrEmoji name={produce.name} size="lg" />
+            <ProduceImageOrEmoji
+              name={produce.name}
+              imagePath={savedImagePath}
+              size="lg"
+              refreshKey={imageRefreshKey + previewKey}
+            />
           </div>
         </div>
 
@@ -264,10 +282,133 @@ function ImageEditModal({
   )
 }
 
+function AddItemModal({
+  categories,
+  onClose,
+  onAdded,
+}: {
+  categories: Category[]
+  onClose: () => void
+  onAdded: () => void
+}) {
+  const { addProduceItem } = useProduceStore()
+  const [name, setName] = useState('')
+  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? 0)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async () => {
+    const trimmedName = name.trim()
+    if (!trimmedName) {
+      setError('Please enter an item name')
+      return
+    }
+    if (!categoryId) {
+      setError('Please select a category')
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+
+    const result = await addProduceItem(trimmedName, categoryId)
+    if (result.success) {
+      onAdded()
+    } else {
+      setError(result.error || 'Failed to add item')
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
+      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-xl">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-touch-lg font-bold text-earth-800">Add New Item</h3>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            disabled={isSubmitting}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-earth-800/70 mb-2">
+            Item Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              setError(null)
+            }}
+            placeholder="e.g., Heirloom Tomatoes"
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:outline-none select-text"
+            disabled={isSubmitting}
+            autoFocus
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-earth-800/70 mb-2">
+            Category <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(parseInt(e.target.value))}
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-primary-500 focus:outline-none bg-white"
+            disabled={isSubmitting}
+          >
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.icon} {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
+
+        {isSubmitting && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-earth-800/70">
+            <LoadingSpinner size="sm" />
+            Generating item information...
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 text-sm font-medium text-earth-800 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting || !name.trim()}
+            className="flex-1 px-4 py-3 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors"
+          >
+            {isSubmitting ? 'Adding...' : 'Add Item'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ProduceManager() {
-  const navigate = useNavigate()
-  const { isSellerAuthenticated } = useAppStore()
   const { searchQuery, setSearchQuery } = useSellerStore()
+  const { clearCachedContent } = useEducationStore()
   const {
     categories,
     allProduce,
@@ -275,19 +416,15 @@ export default function ProduceManager() {
     fetchCategories,
     fetchAllProduce,
     toggleAvailability,
+    refreshItemInfo,
     selectedCategoryId,
     setSelectedCategoryId,
   } = useProduceStore()
 
   const [editingProduce, setEditingProduce] = useState<EditingProduce | null>(null)
+  const [showAddItem, setShowAddItem] = useState(false)
   const [imageRefreshKey, setImageRefreshKey] = useState(0)
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!isSellerAuthenticated) {
-      navigate('/seller')
-    }
-  }, [isSellerAuthenticated, navigate])
+  const [refreshingId, setRefreshingId] = useState<number | null>(null)
 
   // Fetch data on mount
   useEffect(() => {
@@ -316,6 +453,7 @@ export default function ProduceManager() {
     setEditingProduce({
       id: produce.id,
       name: produce.name,
+      imagePath: produce.imagePath || null,
       imageSourceUrl: produce.imageSourceUrl || null,
       imageCreditName: produce.imageCreditName || null,
       imageCreditUrl: produce.imageCreditUrl || null,
@@ -325,9 +463,22 @@ export default function ProduceManager() {
 
   const handleSaveImage = () => {
     setEditingProduce(null)
-    // Increment refresh key to force image components to re-check
     setImageRefreshKey(prev => prev + 1)
-    // Refresh produce data to get updated image info
+    fetchAllProduce()
+  }
+
+  const handleRefreshInfo = async (produce: Produce) => {
+    setRefreshingId(produce.id)
+    const result = await refreshItemInfo(produce.id, produce.name)
+    if (result.success) {
+      clearCachedContent(produce.id)
+    }
+    setRefreshingId(null)
+  }
+
+  const handleItemAdded = () => {
+    setShowAddItem(false)
+    setImageRefreshKey(prev => prev + 1)
     fetchAllProduce()
   }
 
@@ -355,6 +506,12 @@ export default function ProduceManager() {
 
           {/* Quick Actions */}
           <div className="flex gap-3">
+            <button
+              onClick={() => setShowAddItem(true)}
+              className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors"
+            >
+              + Add Item
+            </button>
             <button
               onClick={() => {
                 allProduce.forEach((p) => {
@@ -434,7 +591,12 @@ export default function ProduceManager() {
                         className="relative group flex-shrink-0"
                         title="Edit image"
                       >
-                        <ProduceImageOrEmoji name={produce.name} size="md" />
+                        <ProduceImageOrEmoji
+                          name={produce.name}
+                          imagePath={produce.imagePath}
+                          size="md"
+                          refreshKey={imageRefreshKey}
+                        />
                         <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
                           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -442,12 +604,27 @@ export default function ProduceManager() {
                         </div>
                       </button>
 
-                      {/* Name - clicking toggles availability */}
                       <button
                         onClick={() => toggleAvailability(produce.id)}
                         className="flex-1 text-left font-medium text-earth-800 hover:text-primary-600 transition-colors"
                       >
                         {produce.name}
+                      </button>
+
+                      {/* Refresh Info */}
+                      <button
+                        onClick={() => handleRefreshInfo(produce)}
+                        disabled={refreshingId === produce.id}
+                        className="p-2 text-earth-800/60 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors flex-shrink-0 disabled:opacity-50"
+                        title="Refresh item information"
+                      >
+                        {refreshingId === produce.id ? (
+                          <LoadingSpinner size="sm" />
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        )}
                       </button>
 
                       {/* Toggle Switch */}
@@ -481,7 +658,7 @@ export default function ProduceManager() {
             {availableCount} items marked as available
           </span>
           <span className="text-sm opacity-80">
-            Click image to edit | Changes saved automatically
+            Click image to edit | Refresh icon to update info
           </span>
         </div>
       </div>
@@ -490,8 +667,18 @@ export default function ProduceManager() {
       {editingProduce && (
         <ImageEditModal
           produce={editingProduce}
+          imageRefreshKey={imageRefreshKey}
           onClose={() => setEditingProduce(null)}
           onSave={handleSaveImage}
+        />
+      )}
+
+      {/* Add Item Modal */}
+      {showAddItem && categories.length > 0 && (
+        <AddItemModal
+          categories={categories}
+          onClose={() => setShowAddItem(false)}
+          onAdded={handleItemAdded}
         />
       )}
     </div>

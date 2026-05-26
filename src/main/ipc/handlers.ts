@@ -3,6 +3,7 @@ import * as repository from '../database/repository'
 import { verifyPin, hashPin } from '../database/migrations'
 import { getDatabase } from '../database/schema'
 import { generateEducationContent, generateRecipes } from '../services/claude'
+import { isFallbackEducationContent } from '../services/educationFallback'
 import { sendRecipeEmail, isEmailEnabled } from '../services/email'
 import { downloadProduceImage } from '../services/imageDownloader'
 import { printRecipe } from '../services/printer'
@@ -73,13 +74,70 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
     // Generate new content
     const content = await generateEducationContent(produceName)
 
-    // Save to cache
-    repository.saveEducationContent(produceId, content)
+  // Don't persist placeholder content — allow retry when back online
+    if (!isFallbackEducationContent(content)) {
+      repository.saveEducationContent(produceId, content)
+    }
 
     return {
       produceId,
       ...content,
       generatedAt: new Date().toISOString(),
+      isFallback: isFallbackEducationContent(content),
+    }
+  })
+
+  ipcMain.handle('education:refresh', async (_, produceName: string, produceId: number) => {
+    repository.deleteEducationContent(produceId)
+
+    const content = await generateEducationContent(produceName)
+    const isFallback = isFallbackEducationContent(content)
+
+    if (!isFallback) {
+      repository.saveEducationContent(produceId, content)
+    }
+
+    return {
+      produceId,
+      ...content,
+      generatedAt: new Date().toISOString(),
+      isFallback,
+    }
+  })
+
+  ipcMain.handle('education:isFallback', (_, produceId: number) => {
+    const cached = repository.getEducationContent(produceId)
+    if (!cached) return false
+    return isFallbackEducationContent(cached)
+  })
+
+  ipcMain.handle('produce:createWithDetails', async (_, data: { name: string; categoryId: number }) => {
+    const trimmedName = data.name.trim()
+    if (!trimmedName) {
+      throw new Error('Item name is required')
+    }
+
+    const existing = repository.getProduceByName(trimmedName)
+    if (existing) {
+      throw new Error(`An item named "${trimmedName}" already exists`)
+    }
+
+    const produceId = repository.addProduce({
+      name: trimmedName,
+      categoryId: data.categoryId,
+    })
+
+    const content = await generateEducationContent(trimmedName)
+    const isFallback = isFallbackEducationContent(content)
+    if (!isFallback) {
+      repository.saveEducationContent(produceId, content)
+    }
+
+    const produce = repository.getProduceById(produceId)
+
+    return {
+      produce,
+      educationGenerated: !isFallback,
     }
   })
 

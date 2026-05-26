@@ -23,6 +23,23 @@ interface ProduceState {
   // Toggle availability (seller mode)
   toggleAvailability: (produceId: number) => Promise<void>
 
+  // Add a new produce item with AI-generated content
+  addProduceItem: (name: string, categoryId: number) => Promise<{
+    success: boolean
+    error?: string
+    educationGenerated?: boolean
+  }>
+
+  // Refresh AI-generated education content for an item
+  refreshItemInfo: (produceId: number, produceName: string) => Promise<{
+    success: boolean
+    isFallback?: boolean
+    error?: string
+  }>
+
+  // Check if item has placeholder education content
+  checkFallbackStatus: (produceId: number) => Promise<boolean>
+
   // Selected category filter
   selectedCategoryId: number | null
   setSelectedCategoryId: (categoryId: number | null) => void
@@ -117,4 +134,45 @@ export const useProduceStore = create<ProduceState>((set, get) => ({
   // Category filter
   selectedCategoryId: null,
   setSelectedCategoryId: (selectedCategoryId) => set({ selectedCategoryId }),
+
+  addProduceItem: async (name: string, categoryId: number) => {
+    try {
+      const result = await window.electronAPI.createProduceWithDetails({ name, categoryId })
+      await get().fetchAllProduce()
+      return {
+        success: true,
+        educationGenerated: result.educationGenerated,
+      }
+    } catch (error) {
+      console.error('Failed to add produce item:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to add item',
+      }
+    }
+  },
+
+  refreshItemInfo: async (produceId: number, produceName: string) => {
+    try {
+      const content = await window.electronAPI.refreshEducationContent(produceName, produceId)
+      return {
+        success: true,
+        isFallback: content.isFallback ?? false,
+      }
+    } catch (error) {
+      console.error('Failed to refresh item info:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to refresh item info',
+      }
+    }
+  },
+
+  checkFallbackStatus: async (produceId: number) => {
+    try {
+      return await window.electronAPI.isFallbackEducationContent(produceId)
+    } catch {
+      return false
+    }
+  },
 }))

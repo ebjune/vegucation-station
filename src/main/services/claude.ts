@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { Recipe } from '../database/repository'
+import { createFallbackEducationContent } from './educationFallback'
 
 // Lazy-initialize the Anthropic client (after dotenv loads)
 let anthropicClient: Anthropic | null = null
@@ -50,6 +51,9 @@ Requirements for funFacts:
 - Use kid-friendly language (simple words, fun comparisons)
 - Include interesting trivia kids would enjoy sharing
 - Make facts memorable and engaging
+- Use a DIFFERENT topic for each fact (e.g. how it grows, colors/shapes, animals that eat it, fun science, cooking uses, where it's grown today, seasonal timing)
+- Do NOT use historical clichés or repetitive patterns — avoid Ancient Romans, ancient Egyptians, medieval times, "did you know people have eaten this for thousands of years", or similar stock trivia
+- Facts should feel fresh and varied, not like a template
 
 Requirements for nutritionInfo:
 - Keep it simple and accessible
@@ -86,20 +90,9 @@ Return ONLY valid JSON, no additional text or markdown.`
     return content
   } catch (error) {
     console.error('Error generating education content:', error)
-    // Return fallback content if API fails
-    return {
-      funFacts: [
-        `${produceName} is a nutritious food found at farmers markets!`,
-        `Fresh ${produceName.toLowerCase()} tastes better than store-bought.`,
-        `Many farmers grow ${produceName.toLowerCase()} using sustainable methods.`,
-        `Ask the farmer about how they grow their ${produceName.toLowerCase()}!`,
-      ],
-      nutritionInfo: {
-        benefits: ['Fresh produce is packed with nutrients!'],
-      },
-      detailedInfo: `${produceName} is a wonderful addition to any meal. Visit your local farmers market to find the freshest options and talk to the farmers about their growing practices.`,
-    }
   }
+
+  return createFallbackEducationContent(produceName)
 }
 
 export async function generateRecipes(ingredients: string[]): Promise<Recipe[]> {

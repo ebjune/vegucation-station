@@ -52,6 +52,11 @@ export const IPC_CHANNELS = {
   // Education
   EDUCATION_GET_CONTENT: 'education:getContent',
   EDUCATION_GENERATE: 'education:generate',
+  EDUCATION_REFRESH: 'education:refresh',
+  EDUCATION_IS_FALLBACK: 'education:isFallback',
+
+  // Produce
+  PRODUCE_CREATE_WITH_DETAILS: 'produce:createWithDetails',
 
   // Recipes
   RECIPES_GENERATE: 'recipes:generate',
