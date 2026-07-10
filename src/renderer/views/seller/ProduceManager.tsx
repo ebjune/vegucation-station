@@ -289,12 +289,13 @@ function AddItemModal({
 }: {
   categories: Category[]
   onClose: () => void
-  onAdded: () => void
+  onAdded: (result: { educationGenerated: boolean; imageGenerated: boolean }) => void
 }) {
   const { addProduceItem } = useProduceStore()
   const [name, setName] = useState('')
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? 0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async () => {
@@ -310,13 +311,18 @@ function AddItemModal({
 
     setIsSubmitting(true)
     setError(null)
+    setStatusMessage('Creating item and generating information...')
 
     const result = await addProduceItem(trimmedName, categoryId)
     if (result.success) {
-      onAdded()
+      onAdded({
+        educationGenerated: result.educationGenerated ?? false,
+        imageGenerated: result.imageGenerated ?? false,
+      })
     } else {
       setError(result.error || 'Failed to add item')
       setIsSubmitting(false)
+      setStatusMessage(null)
     }
   }
 
@@ -378,12 +384,16 @@ function AddItemModal({
           </div>
         )}
 
-        {isSubmitting && (
+        {isSubmitting && statusMessage && (
           <div className="mb-4 flex items-center gap-2 text-sm text-earth-800/70">
             <LoadingSpinner size="sm" />
-            Generating item information...
+            {statusMessage}
           </div>
         )}
+
+        <p className="mb-4 text-xs text-earth-800/50">
+          The app will use AI to generate fun facts and nutrition info, and search for a suitable image automatically.
+        </p>
 
         <div className="flex gap-3">
           <button
@@ -425,6 +435,7 @@ export default function ProduceManager() {
   const [showAddItem, setShowAddItem] = useState(false)
   const [imageRefreshKey, setImageRefreshKey] = useState(0)
   const [refreshingId, setRefreshingId] = useState<number | null>(null)
+  const [addItemNotice, setAddItemNotice] = useState<string | null>(null)
 
   // Fetch data on mount
   useEffect(() => {
@@ -476,10 +487,24 @@ export default function ProduceManager() {
     setRefreshingId(null)
   }
 
-  const handleItemAdded = () => {
+  const handleItemAdded = (result: { educationGenerated: boolean; imageGenerated: boolean }) => {
     setShowAddItem(false)
     setImageRefreshKey(prev => prev + 1)
     fetchAllProduce()
+
+    const notices: string[] = []
+    if (result.educationGenerated) {
+      notices.push('item information generated')
+    } else {
+      notices.push('item information could not be generated (check your API key)')
+    }
+    if (result.imageGenerated) {
+      notices.push('image found')
+    } else {
+      notices.push('no image found — you can add one manually')
+    }
+    setAddItemNotice(`Item added. ${notices.join('; ')}.`)
+    setTimeout(() => setAddItemNotice(null), 8000)
   }
 
   if (produceLoading && allProduce.length === 0) {
@@ -502,6 +527,11 @@ export default function ProduceManager() {
             <p className="text-touch-sm text-earth-800/70">
               {availableCount} of {allProduce.length} items available today
             </p>
+            {addItemNotice && (
+              <p className="mt-2 text-sm text-primary-700 bg-primary-50 border border-primary-200 rounded-lg px-3 py-2">
+                {addItemNotice}
+              </p>
+            )}
           </div>
 
           {/* Quick Actions */}
@@ -511,6 +541,16 @@ export default function ProduceManager() {
               className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors"
             >
               + Add Item
+            </button>
+            <button
+              onClick={() => {
+                if (window.confirm('Quit VegucationStation?')) {
+                  void window.electronAPI.quitApp()
+                }
+              }}
+              className="px-4 py-2 text-sm font-medium text-earth-800 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              Quit App
             </button>
             <button
               onClick={() => {
@@ -674,12 +714,26 @@ export default function ProduceManager() {
       )}
 
       {/* Add Item Modal */}
-      {showAddItem && categories.length > 0 && (
-        <AddItemModal
-          categories={categories}
-          onClose={() => setShowAddItem(false)}
-          onAdded={handleItemAdded}
-        />
+      {showAddItem && (
+        categories.length > 0 ? (
+          <AddItemModal
+            categories={categories}
+            onClose={() => setShowAddItem(false)}
+            onAdded={handleItemAdded}
+          />
+        ) : (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl text-center">
+              <LoadingSpinner size="md" message="Loading categories..." />
+              <button
+                onClick={() => setShowAddItem(false)}
+                className="mt-4 px-4 py-2 text-sm font-medium text-earth-800 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )
       )}
     </div>
   )

@@ -6,6 +6,7 @@ import { generateEducationContent, generateRecipes } from '../services/claude'
 import { isFallbackEducationContent } from '../services/educationFallback'
 import { sendRecipeEmail, isEmailEnabled } from '../services/email'
 import { downloadProduceImage } from '../services/imageDownloader'
+import { searchProduceImage } from '../services/imageSearch'
 import { printRecipe } from '../services/printer'
 
 export function registerIpcHandlers(ipcMain: IpcMain): void {
@@ -122,15 +123,40 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
       throw new Error(`An item named "${trimmedName}" already exists`)
     }
 
+    const category = repository.getCategoryById(data.categoryId)
+    if (!category) {
+      throw new Error('Selected category was not found')
+    }
+
     const produceId = repository.addProduce({
       name: trimmedName,
       categoryId: data.categoryId,
     })
 
-    const content = await generateEducationContent(trimmedName)
+    const [content, imageResult] = await Promise.all([
+      generateEducationContent(trimmedName),
+      searchProduceImage(trimmedName, category.name),
+    ])
+
     const isFallback = isFallbackEducationContent(content)
     if (!isFallback) {
       repository.saveEducationContent(produceId, content)
+    }
+
+    let imageGenerated = false
+    if (imageResult) {
+      try {
+        const localPath = await downloadProduceImage(imageResult.imageUrl, trimmedName)
+        repository.updateProduceImage(produceId, localPath, {
+          sourceUrl: imageResult.sourceUrl,
+          creditName: imageResult.creditName,
+          creditUrl: imageResult.creditUrl,
+          license: imageResult.license,
+        })
+        imageGenerated = true
+      } catch (error) {
+        console.error('Failed to download image for new produce:', error)
+      }
     }
 
     const produce = repository.getProduceById(produceId)
@@ -138,6 +164,7 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
     return {
       produce,
       educationGenerated: !isFallback,
+      imageGenerated,
     }
   })
 
@@ -146,15 +173,17 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
     // Create hash for caching
     const ingredientHash = ingredients.sort().join(',').toLowerCase()
 
-    // Check cache first
+    // Check cache first — ignore incomplete cached results from earlier failures
     const cached = repository.getCachedRecipes(ingredientHash)
-    if (cached) return cached
+    if (cached && cached.length >= 3) return cached
 
     // Generate new recipes
     const recipes = await generateRecipes(ingredients)
 
-    // Save to cache
-    repository.saveRecipesToCache(ingredientHash, recipes)
+    // Only cache complete recipe sets
+    if (recipes.length >= 3) {
+      repository.saveRecipesToCache(ingredientHash, recipes)
+    }
 
     return recipes
   })
@@ -194,6 +223,10 @@ export function registerIpcHandlers(ipcMain: IpcMain): void {
   // App info
   ipcMain.handle('app:getVersion', () => {
     return app.getVersion()
+  })
+
+  ipcMain.handle('app:quit', () => {
+    app.quit()
   })
 
   ipcMain.handle('app:isOnline', () => {

@@ -1,14 +1,8 @@
 import Database from 'better-sqlite3'
-import path from 'path'
-import { app } from 'electron'
+import { getDbPath } from '../config/dataPaths'
 import { seedInitialData } from './migrations'
 
 let db: Database.Database | null = null
-
-function getDbPath(): string {
-  const userDataPath = app.getPath('userData')
-  return path.join(userDataPath, 'vegucation.db')
-}
 
 export function getDatabase(): Database.Database {
   if (!db) {

@@ -2,7 +2,7 @@ import fs from 'fs'
 import { protocol, net } from 'electron'
 import path from 'path'
 import { pathToFileURL } from 'url'
-import { getProduceImagesDir } from './imageDownloader'
+import { getBundledProduceImagesDir, getProduceImagesDir } from './imageDownloader'
 
 export function registerProduceImageProtocol(): void {
   protocol.registerSchemesAsPrivileged([
@@ -19,6 +19,20 @@ export function registerProduceImageProtocol(): void {
   ])
 }
 
+function resolveProduceImagePath(fileName: string): string | null {
+  const userFile = path.join(getProduceImagesDir(), fileName)
+  if (fs.existsSync(userFile)) {
+    return userFile
+  }
+
+  const bundledFile = path.join(getBundledProduceImagesDir(), fileName)
+  if (fs.existsSync(bundledFile)) {
+    return bundledFile
+  }
+
+  return null
+}
+
 export function setupProduceImageProtocol(): void {
   protocol.handle('produce', async (request) => {
     try {
@@ -27,9 +41,8 @@ export function setupProduceImageProtocol(): void {
         return new Response('Not found', { status: 404 })
       }
 
-      const filePath = path.join(getProduceImagesDir(), fileName)
-
-      if (!fs.existsSync(filePath)) {
+      const filePath = resolveProduceImagePath(fileName)
+      if (!filePath) {
         return new Response('Not found', { status: 404 })
       }
 

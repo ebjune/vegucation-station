@@ -30,9 +30,14 @@ function tryLoadImage(src: string): Promise<boolean> {
   })
 }
 
+function produceProtocolUrl(fileName: string): string {
+  return `produce:///${encodeURIComponent(fileName)}`
+}
+
 function normalizeDbImagePath(imagePath: string): string | null {
   if (imagePath.startsWith('/produce-images/')) {
-    return imagePath
+    const fileName = imagePath.replace(/^\/produce-images\//, '')
+    return produceProtocolUrl(fileName)
   }
   if (imagePath.startsWith('produce://')) {
     try {
@@ -75,10 +80,10 @@ export function useProduceImage(
       }
 
       const baseName = nameToImageBase(produceName)
-      const basePath = `/produce-images/${baseName}`
 
       for (const ext of IMAGE_EXTENSIONS) {
-        const testPath = withCacheBust(basePath + ext, refreshKey)
+        const fileName = `${baseName}${ext}`
+        const testPath = withCacheBust(produceProtocolUrl(fileName), refreshKey)
         if (await tryLoadImage(testPath)) {
           if (!cancelled) setImageSrc(testPath)
           return

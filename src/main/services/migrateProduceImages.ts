@@ -4,9 +4,7 @@ import { getDatabase } from '../database/schema'
 import {
   getProduceImagesDir,
   getBundledProduceImagesDir,
-  isDevMode,
   toProduceImageUrl,
-  toPublicImagePath,
 } from './imageDownloader'
 
 function fileNameFromStoredPath(imagePath: string): string | null {
@@ -26,20 +24,8 @@ function fileNameFromStoredPath(imagePath: string): string | null {
   return null
 }
 
-function syncToPublicFolder(fileName: string, userFile: string): void {
-  const publicDir = getBundledProduceImagesDir()
-  if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir, { recursive: true })
-  }
-  fs.copyFileSync(userFile, path.join(publicDir, fileName))
-}
-
-function correctPathForFile(fileName: string): string {
-  return isDevMode() ? toPublicImagePath(fileName) : toProduceImageUrl(fileName)
-}
-
 /**
- * Ensure downloaded images are reachable by the renderer and fix legacy URL formats.
+ * Ensure downloaded images are stored in data/produce-images and referenced via produce:// URLs.
  */
 export function migrateLegacyProduceImages(): void {
   const db = getDatabase()
@@ -57,12 +43,9 @@ export function migrateLegacyProduceImages(): void {
     if (!fileName) continue
 
     const userFile = path.join(userDir, fileName)
-    const correctPath = correctPathForFile(fileName)
+    const correctPath = toProduceImageUrl(fileName)
 
     if (fs.existsSync(userFile)) {
-      if (isDevMode()) {
-        syncToPublicFolder(fileName, userFile)
-      }
       if (row.imagePath !== correctPath) {
         db.prepare('UPDATE produce SET image_path = ? WHERE id = ?').run(correctPath, row.id)
       }
@@ -72,9 +55,6 @@ export function migrateLegacyProduceImages(): void {
     const bundledFile = path.join(bundledDir, fileName)
     if (fs.existsSync(bundledFile)) {
       fs.copyFileSync(bundledFile, userFile)
-      if (isDevMode()) {
-        syncToPublicFolder(fileName, userFile)
-      }
       db.prepare('UPDATE produce SET image_path = ? WHERE id = ?').run(correctPath, row.id)
     }
   }

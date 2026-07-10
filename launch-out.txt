@@ -1,0 +1,11 @@
+
+ANTHROPIC_API_KEY loaded: false
+isDev: false isPackaged: true isKiosk: true
+Got single instance lock: true
+Initializing database at: C:\Personal\VegucationStation\release\win-unpacked\data\vegucation.db
+Seeding initial data...
+Seeded 6 categories and 61 produce items
+Database initialized successfully
+Creating window...
+Loading packaged renderer from: C:\Personal\VegucationStation\release\win-unpacked\resources\app.asar\dist\renderer\index.html
+Window ready to show

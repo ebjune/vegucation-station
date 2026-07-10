@@ -4,6 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import { randomUUID } from 'crypto'
 import { app } from 'electron'
+import { getProduceImagesDir } from '../config/dataPaths'
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
 
@@ -16,37 +17,36 @@ export function nameToImageBase(name: string): string {
 }
 
 /**
- * Writable folder for seller-downloaded images (persists across restarts).
+ * Writable folder for seller-downloaded and portable produce images.
  */
-export function getProduceImagesDir(): string {
-  const imagesDir = path.join(app.getPath('userData'), 'produce-images')
-  if (!fs.existsSync(imagesDir)) {
-    fs.mkdirSync(imagesDir, { recursive: true })
-  }
-  return imagesDir
-}
+export { getProduceImagesDir } from '../config/dataPaths'
 
 /** URL stored in the database and loaded via the produce:// protocol (three slashes required). */
 export function toProduceImageUrl(fileName: string): string {
   return `produce:///${encodeURIComponent(fileName)}`
 }
 
-/** Web path served by Vite in development (same as the original working behavior). */
+/** Web path served by Vite in development (legacy — prefer produce:// URLs). */
 export function toPublicImagePath(fileName: string): string {
   return `/produce-images/${fileName}`
 }
 
-export function isDevMode(): boolean {
-  return process.env.NODE_ENV === 'development' || !app.isPackaged
-}
-
 /**
- * Bundled seed images shipped with the app (read-only, dev/public or production resources).
+ * Bundled seed images shipped with the app (read-only).
+ * Packaged: resources/produce-images
+ * Preview/build: dist/renderer/produce-images
+ * Dev source: src/renderer/public/produce-images
  */
 export function getBundledProduceImagesDir(): string {
   if (app.isPackaged) {
     return path.join(process.resourcesPath, 'produce-images')
   }
+
+  const distDir = path.join(app.getAppPath(), 'dist/renderer/produce-images')
+  if (fs.existsSync(distDir)) {
+    return distDir
+  }
+
   return path.join(app.getAppPath(), 'src/renderer/public/produce-images')
 }
 
@@ -189,7 +189,7 @@ function fetchImage(
 }
 
 /**
- * Download an image from a URL and save it to userData/produce-images.
+ * Download an image from a URL and save it to data/produce-images.
  * Does not remove the previous image until the new file is validated.
  */
 export async function downloadProduceImage(imageUrl: string, produceName: string): Promise<string> {
@@ -208,17 +208,6 @@ export async function downloadProduceImage(imageUrl: string, produceName: string
 
     removeExistingImages(imagesDir, baseName)
     fs.renameSync(tempPath, finalPath)
-
-    // In development, also copy to public/ so Vite serves /produce-images/... (original behavior)
-    if (isDevMode()) {
-      const publicDir = getBundledProduceImagesDir()
-      if (!fs.existsSync(publicDir)) {
-        fs.mkdirSync(publicDir, { recursive: true })
-      }
-      removeExistingImages(publicDir, baseName)
-      fs.copyFileSync(finalPath, path.join(publicDir, fileName))
-      return toPublicImagePath(fileName)
-    }
   } catch (error) {
     safeUnlink(tempPath)
     throw error

@@ -2,6 +2,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { Recipe } from '../database/repository'
 import { createFallbackEducationContent } from './educationFallback'
 
+const EXPECTED_RECIPE_COUNT = 3
+
 // Lazy-initialize the Anthropic client (after dotenv loads)
 let anthropicClient: Anthropic | null = null
 
@@ -13,6 +15,120 @@ function getAnthropicClient(): Anthropic {
     })
   }
   return anthropicClient
+}
+
+function extractJsonFromResponse(text: string): string {
+  const trimmed = text.trim()
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fenceMatch) {
+    return fenceMatch[1].trim()
+  }
+
+  const arrayStart = trimmed.indexOf('[')
+  const arrayEnd = trimmed.lastIndexOf(']')
+  if (arrayStart !== -1 && arrayEnd > arrayStart) {
+    return trimmed.slice(arrayStart, arrayEnd + 1)
+  }
+
+  return trimmed
+}
+
+function isValidRecipe(recipe: unknown): recipe is Recipe {
+  if (!recipe || typeof recipe !== 'object') return false
+  const r = recipe as Record<string, unknown>
+  return (
+    typeof r.title === 'string' &&
+    typeof r.description === 'string' &&
+    typeof r.prepTime === 'string' &&
+    typeof r.difficulty === 'string' &&
+    typeof r.servings === 'number' &&
+    Array.isArray(r.ingredients) &&
+    Array.isArray(r.steps)
+  )
+}
+
+function parseRecipeArray(text: string): Recipe[] {
+  const recipes = JSON.parse(extractJsonFromResponse(text)) as unknown
+  if (!Array.isArray(recipes)) {
+    throw new Error('Recipe response was not a JSON array')
+  }
+
+  const validRecipes = recipes.filter(isValidRecipe)
+  if (validRecipes.length < EXPECTED_RECIPE_COUNT) {
+    throw new Error(`Expected ${EXPECTED_RECIPE_COUNT} recipes, received ${validRecipes.length}`)
+  }
+
+  return validRecipes.slice(0, EXPECTED_RECIPE_COUNT)
+}
+
+function createFallbackRecipes(ingredients: string[]): Recipe[] {
+  const primary = ingredients[0]
+  const secondary = ingredients[1] ?? primary
+  const ingredientList = ingredients.map((item) => item.toLowerCase()).join(', ')
+
+  return [
+    {
+      title: `Fresh ${primary} Salad`,
+      description: `A simple, fresh salad featuring ${primary.toLowerCase()} from the farmers market.`,
+      prepTime: '10 minutes',
+      difficulty: 'Easy',
+      servings: 4,
+      ingredients: [
+        `Fresh ${primary.toLowerCase()}`,
+        secondary !== primary ? `Fresh ${secondary.toLowerCase()}` : 'Mixed greens',
+        'Olive oil',
+        'Lemon juice',
+        'Salt and pepper to taste',
+      ],
+      steps: [
+        `Wash and prepare the ${primary.toLowerCase()}.`,
+        'Arrange on a plate.',
+        'Drizzle with olive oil and lemon juice.',
+        'Season with salt and pepper.',
+      ],
+    },
+    {
+      title: `${primary} and ${secondary} Skillet`,
+      description: `A quick weeknight skillet using ${ingredientList} from the market.`,
+      prepTime: '25 minutes',
+      difficulty: 'Medium',
+      servings: 4,
+      ingredients: [
+        `2 cups ${primary.toLowerCase()}, chopped`,
+        secondary !== primary ? `1 cup ${secondary.toLowerCase()}, sliced` : '1 small onion, sliced',
+        '2 tablespoons olive oil',
+        '2 cloves garlic, minced',
+        'Salt and pepper to taste',
+      ],
+      steps: [
+        'Heat olive oil in a large skillet over medium heat.',
+        `Add garlic and cook until fragrant, about 30 seconds.`,
+        `Add ${primary.toLowerCase()}${secondary !== primary ? ` and ${secondary.toLowerCase()}` : ''} and cook until tender.`,
+        'Season with salt and pepper and serve warm.',
+      ],
+    },
+    {
+      title: `Farmers Market ${primary} Bake`,
+      description: `A more adventurous baked dish that lets ${ingredientList} shine.`,
+      prepTime: '45 minutes',
+      difficulty: 'Advanced',
+      servings: 6,
+      ingredients: [
+        `3 cups ${primary.toLowerCase()}, prepared`,
+        secondary !== primary ? `1 cup ${secondary.toLowerCase()}` : '1/2 cup grated cheese',
+        '1 cup broth or cream',
+        '1 tablespoon fresh herbs',
+        'Salt and pepper to taste',
+      ],
+      steps: [
+        'Preheat the oven to 375°F (190°C).',
+        `Layer ${primary.toLowerCase()}${secondary !== primary ? ` with ${secondary.toLowerCase()}` : ''} in a baking dish.`,
+        'Pour broth or cream over the top and season well.',
+        'Bake for 30-35 minutes until bubbling and golden.',
+        'Garnish with fresh herbs before serving.',
+      ],
+    },
+  ]
 }
 
 interface EducationContentResponse {
@@ -134,7 +250,7 @@ Return ONLY valid JSON array with exactly 3 recipes, no additional text or markd
   try {
     const response = await getAnthropicClient().messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
+      max_tokens: 4096,
       messages: [
         {
           role: 'user',
@@ -143,38 +259,19 @@ Return ONLY valid JSON array with exactly 3 recipes, no additional text or markd
       ],
     })
 
+    if (response.stop_reason === 'max_tokens') {
+      throw new Error('Recipe response was truncated')
+    }
+
     // Extract text content from response
     const textContent = response.content.find((block) => block.type === 'text')
     if (!textContent || textContent.type !== 'text') {
       throw new Error('No text content in response')
     }
 
-    // Parse the JSON response
-    const recipes = JSON.parse(textContent.text) as Recipe[]
-    return recipes
+    return parseRecipeArray(textContent.text)
   } catch (error) {
     console.error('Error generating recipes:', error)
-    // Return fallback recipes if API fails
-    return [
-      {
-        title: `Fresh ${ingredients[0]} Salad`,
-        description: `A simple, fresh salad featuring ${ingredients[0].toLowerCase()} from the farmers market.`,
-        prepTime: '10 minutes',
-        difficulty: 'Easy',
-        servings: 4,
-        ingredients: [
-          `Fresh ${ingredients[0].toLowerCase()}`,
-          'Olive oil',
-          'Lemon juice',
-          'Salt and pepper to taste',
-        ],
-        steps: [
-          `Wash and prepare the ${ingredients[0].toLowerCase()}.`,
-          'Arrange on a plate.',
-          'Drizzle with olive oil and lemon juice.',
-          'Season with salt and pepper.',
-        ],
-      },
-    ]
+    return createFallbackRecipes(ingredients)
   }
 }

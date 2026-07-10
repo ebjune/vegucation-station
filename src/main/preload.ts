@@ -53,6 +53,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // App info
   getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
+  quitApp: () => ipcRenderer.invoke('app:quit'),
   isOnline: () => ipcRenderer.invoke('app:isOnline'),
 
   // Recipe receipt printing (main process → named Windows printer)
@@ -79,6 +80,7 @@ export interface ElectronAPI {
   createProduceWithDetails: (data: { name: string; categoryId: number }) => Promise<{
     produce: Produce | null
     educationGenerated: boolean
+    imageGenerated: boolean
   }>
   generateRecipes: (ingredients: string[]) => Promise<Recipe[]>
   getCachedRecipes: (ingredientHash: string) => Promise<Recipe[] | null>
@@ -88,6 +90,7 @@ export interface ElectronAPI {
   isEmailEnabled: () => Promise<boolean>
   sendRecipeEmail: (email: string, recipes: unknown) => Promise<boolean>
   getAppVersion: () => Promise<string>
+  quitApp: () => Promise<void>
   isOnline: () => Promise<boolean>
 
   printRecipe: (recipe: unknown) => Promise<{ ok: boolean; error?: string }>

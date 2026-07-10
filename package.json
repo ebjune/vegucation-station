@@ -55,7 +55,27 @@
       "output": "release"
     },
     "files": [
-      "dist/**/*"
+      "dist/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**"
+    ],
+    "extraResources": [
+      {
+        "from": ".env.example",
+        "to": ".env.example"
+      },
+      {
+        "from": "src/renderer/public/produce-images",
+        "to": "produce-images",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "data",
+        "to": "default-data",
+        "filter": ["**/*"]
+      }
     ],
     "win": {
       "target": [
@@ -66,14 +86,14 @@
           ]
         }
       ],
-      "icon": "assets/icons/icon.ico"
+      "signAndEditExecutable": false
     },
     "nsis": {
       "oneClick": false,
-      "perMachine": true,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "assets/icons/icon.ico",
-      "uninstallerIcon": "assets/icons/icon.ico"
+      "createDesktopShortcut": true,
+      "runAfterFinish": true
     }
   },
   "packageManager": "pnpm@10.28.0",

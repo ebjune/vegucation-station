@@ -51,6 +51,16 @@ export function getCategories(): Category[] {
   return rows
 }
 
+export function getCategoryById(id: number): Category | null {
+  const db = getDatabase()
+  const row = db.prepare(`
+    SELECT id, name, icon, sort_order as sortOrder
+    FROM categories
+    WHERE id = ?
+  `).get(id) as Category | undefined
+  return row ?? null
+}
+
 // Produce operations
 export function getProduce(categoryId?: number): Produce[] {
   const db = getDatabase()

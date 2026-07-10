@@ -28,6 +28,7 @@ interface ProduceState {
     success: boolean
     error?: string
     educationGenerated?: boolean
+    imageGenerated?: boolean
   }>
 
   // Refresh AI-generated education content for an item
@@ -142,6 +143,7 @@ export const useProduceStore = create<ProduceState>((set, get) => ({
       return {
         success: true,
         educationGenerated: result.educationGenerated,
+        imageGenerated: result.imageGenerated,
       }
     } catch (error) {
       console.error('Failed to add produce item:', error)
